@@ -1,0 +1,16 @@
+# Environment variables and API keys
+.env
+token.json
+credentials.json
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Output files (optional - remove these lines if you want to include sample outputs)
+research_output.txt
+leads_output.txt
+emails_output.txt
+gmail_output.txt
+inbox_output.txt
