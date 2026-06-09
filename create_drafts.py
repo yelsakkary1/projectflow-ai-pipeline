@@ -29,7 +29,7 @@ def create_draft(service, to, subject, body):
     message['subject'] = subject
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
     draft = service.users().drafts().create(userId='me', body={'message': {'raw': raw}}).execute()
-    print(f"Draft created for {to}: {subject}")
+    print(f"✅ Draft created for {to}: {subject}")
     return draft
 
 # Load saved gmail output
@@ -38,23 +38,32 @@ with open("gmail_output.txt", "r") as f:
 
 gmail_service = get_gmail_service()
 
-email_blocks = re.split(r'---\s*\n## DRAFT \d+', gmail_output)
+# Split by EMAIL blocks
+email_blocks = re.split(r'---\s*\n## EMAIL \d+', gmail_output)
 
 drafts_created = 0
+skipped = 0
 for block in email_blocks:
     try:
-        subject_match = re.search(r'\*\*SUBJECT:\*\*\s*(.+)', block)
-        body_match = re.search(r'\*\*BODY:\*\*\s*\n(.*?)(?=---|\Z)', block, re.DOTALL)
-        email_match = re.search(r'\*\*RECIPIENT EMAIL:\*\*\s*(.+)', block)
+        subject_match = re.search(r'\*\*Subject Line:\*\*\s*(.+)', block)
+        body_match = re.search(r'\*\*Body:\*\*\s*\n(.*?)(?=---|\Z)', block, re.DOTALL)
+        email_match = re.search(r'\*\*Recipient Email:\*\*\s*([^\s*]+@[^\s*]+)', block)
 
         if subject_match and body_match and email_match:
             subject = subject_match.group(1).strip()
             body = body_match.group(1).strip()
             to = email_match.group(1).strip()
 
+            # Skip invalid or placeholder emails
+            if '@' not in to or 'to be verified' in to.lower() or '[' in to:
+                print(f"⚠️ Skipping invalid email: {to}")
+                skipped += 1
+                continue
+
             create_draft(gmail_service, to, subject, body)
             drafts_created += 1
     except Exception as e:
-        print(f"Could not create draft: {e}")
+        print(f"❌ Could not create draft: {e}")
 
-print(f"\n{drafts_created} Gmail drafts created successfully")
+print(f"\n🎉 {drafts_created} Gmail drafts created successfully")
+print(f"⚠️ {skipped} emails skipped due to invalid or unverified addresses")
